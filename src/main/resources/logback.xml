@@ -8,27 +8,8 @@
 		</encoder>
 	</appender>
 
-	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">		
-		<file>/tmp/app.log</file>
-	
-		<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-			<fileNamePattern>/tmp/app.log.%i</fileNamePattern>
-			<minIndex>1</minIndex>
-			<maxIndex>1</maxIndex>
-		</rollingPolicy>
-
-		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-			<maxFileSize>10MB</maxFileSize>
-		</triggeringPolicy>
-
-		<encoder>
-			<pattern>[%d{HH:mm:ss.SSS}] %-5level \(%logger{0}:%line\) %m%n</pattern>
-			<charset>utf8</charset>
-		</encoder>
-	</appender>
-
 	<root level="INFO">
 		<appender-ref ref="CONSOLE" />
-		<appender-ref ref="FILE" />
 	</root>
+	
 </configuration>
