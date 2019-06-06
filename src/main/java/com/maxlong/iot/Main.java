@@ -1,5 +1,8 @@
 package com.maxlong.iot;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -9,6 +12,8 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+import com.maxlong.iot.util.JsonUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,7 +73,18 @@ public class Main {
 	
 	void onMessage(String topic, byte[] payload) {
 		if (topicStatus.equals(topic)) {
-			sendModbusReq();
+			String json = new String(payload);
+			Map<?, ?> msg = JsonUtils.fromJson(json, Map.class);			
+			String type = (String) msg.get("type");			
+			if ("heartbeat".equals(type)) { // {"type":"heartbeat","timestamp":"2019-06-06T22:33:09.449Z","rssi":-65,"from":"211.77.241.100:40893"}
+				sendModbusReq();
+				
+			} else if ("disconnect".equals(type)) { // {"type":"disconnect","timestamp":"2019-06-06T22:35:42.112Z","from":"211.77.241.100:42432"}
+				log.warn("{} is disconnected", imei);
+				
+			} else {
+				log.error("Unknown message - {}", json);				
+			}
 			
 		} else if (topicRx.equals(topic)) {
 			recvModbusReply(payload);
@@ -96,6 +112,33 @@ public class Main {
 	
 	void recvModbusReply(byte[] reply) {
 		log.info("RECV - {}", toString(reply));
+		
+		try {		
+			ByteArrayInputStream bais = new ByteArrayInputStream(reply);
+			DataInputStream dis = new DataInputStream(bais);
+			int slaveId = dis.read();
+			if (slaveId != 0x02) {
+				return;
+			}
+			
+			int function = dis.read();
+			if (function != 0x03) {
+				return;
+			}
+			
+			int size = dis.read();
+			if (size != 0x04) { // 2 words
+				return;
+			}
+			
+			float temperature = dis.readShort() / 100.0f;
+			float humidity = dis.readShort() / 100.0f;
+			
+			log.info("Temperature: {}, Humidity: {}", temperature, humidity);
+			
+		} catch (Exception e) {
+			log.error("Failed to decode the modbus reply", e);
+		}		
 	}
 	
 	String toString(byte[] bytes) {
