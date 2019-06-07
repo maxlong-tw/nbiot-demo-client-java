@@ -13,6 +13,8 @@
 8. 當 NB-IoT 轉換器在 20 秒內，沒有收到來自控制端的指令，會向碩久雲平台送出『離線』訊息。
 9. NB-IoT 轉換器與基地台斷線，休眠 1 分鐘後再重複上述流程。
 
+![流程圖](https://github.com/maxlong-tw/nbiot-demo-client-java/raw/master/workflow.png)
+
 ## 編譯需求
 
 1. 安裝 JDK 8 以上版本 https://www.oracle.com/technetwork/java/javase/downloads/index.html#JDK8
