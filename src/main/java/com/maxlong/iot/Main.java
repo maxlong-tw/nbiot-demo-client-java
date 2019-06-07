@@ -69,7 +69,7 @@ public class Main {
 		opt.setCleanSession(true);
 
 		// 建立 MQTT 連線
-		log.info("Connect to MQTT broker - {}", broker);		
+		log.info("向碩久雲平台建立 MQTT 連線 - {}", broker);		
 		mqtt = new MqttClient(broker, MqttClient.generateClientId(), new MemoryPersistence());
 		mqtt.connect(opt);
 		
@@ -93,11 +93,11 @@ public class Main {
 		});
 
 		// 訂閱接收 NB-IoT 轉換器的『狀態』訊息
-		log.info("Subscribe MQTT topic - {}", topicStatus);
+		log.info("準備接收 NB-IoT 轉換器 MQTT 的『狀態』訊息 - {}", topicStatus);
 		mqtt.subscribe(topicStatus); // wait for heartbeat
 		
 		// 訂閱接收 NB-IoT 轉換器的『資料』訊息
-		log.info("Subscribe MQTT topic - {}", topicRx);
+		log.info("準備接收 NB-IoT 轉換器 MQTT 的『回應』訊息 - {}", topicRx);
 		mqtt.subscribe(topicRx); // wait for incoming data
 	}
 	
@@ -112,10 +112,10 @@ public class Main {
 					sendModbusReq(); // 收到『連線』訊息，開始送 Modbus 指令詢問溫濕度計狀態
 					
 				} else if ("disconnect".equals(type)) { // 來自 NB-IoT 的離線狀態，內容為 {"type":"disconnect","timestamp":"2019-06-06T22:35:42.112Z","from":"211.77.241.100:42432"}
-					log.warn("{} is disconnected", imei);
+					log.warn("{} 已經離線", imei);
 					
 				} else {
-					log.error("Unknown message - {}", json);				
+					log.error("未知的 MQTT 訊息 - {}", json);				
 				}
 				
 			} else if (topicRx.equals(topic)) { // 來自 NB-IoT 的『資料』訊息
@@ -123,7 +123,7 @@ public class Main {
 			}
 			
 		} catch (Exception e) {
-			log.error("Failed to handle the incoming message", e);
+			log.error("無法正常處理 MQTT 訊息", e);
 		}
 	}
 	
@@ -137,19 +137,19 @@ public class Main {
 				(byte) 0xc4, 0x38	// CRC16
 		};
 		
-		log.info("SEND - {}", toString(req));
+		log.info("送出 Modbus 指令 - {}", toString(req));
 		
 		try {		
 			mqtt.publish(topicTx, req, 0, false); // 向 NB-IoT 轉換器送出 Modbus 指令
 			
 		} catch (Exception e) {
-			log.error("Failed to publish the MQTT message", e);
+			log.error("無法送出 MQTT 訊息", e);
 		}
 	}
 	
 	// 接收來自站點 2 的溫濕度計的 Modbus/RTU 回應結果
 	void recvModbusReply(byte[] reply) throws IOException {
-		log.info("RECV - {}", toString(reply));
+		log.info("得到 Modbus 回應 - {}", toString(reply));
 		
 		ByteArrayInputStream bais = new ByteArrayInputStream(reply);
 		DataInputStream dis = new DataInputStream(bais);
@@ -172,7 +172,7 @@ public class Main {
 		float temperature = dis.readShort() / 100.0f;
 		float humidity = dis.readShort() / 100.0f;
 		
-		log.info("Temperature: {} °C, Humidity: {} %", temperature, humidity);			
+		log.info("溫度: {} °C, 濕度: {} %", temperature, humidity);			
 	}
 	
 	// byte array to hex string
