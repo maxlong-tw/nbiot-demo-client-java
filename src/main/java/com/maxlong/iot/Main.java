@@ -93,11 +93,11 @@ public class Main {
 		});
 
 		// 訂閱接收 NB-IoT 轉換器的『狀態』訊息
-		log.info("準備接收 NB-IoT 轉換器 MQTT 的『狀態』訊息 - {}", topicStatus);
+		log.info("開始接收 NB-IoT 轉換器 MQTT 的『狀態』訊息 - {}", topicStatus);
 		mqtt.subscribe(topicStatus); // wait for heartbeat
 		
 		// 訂閱接收 NB-IoT 轉換器的『資料』訊息
-		log.info("準備接收 NB-IoT 轉換器 MQTT 的『回應』訊息 - {}", topicRx);
+		log.info("開始接收 NB-IoT 轉換器 MQTT 的『回應』訊息 - {}", topicRx);
 		mqtt.subscribe(topicRx); // wait for incoming data
 	}
 	
