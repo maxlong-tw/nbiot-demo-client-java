@@ -15,11 +15,13 @@
 
 ![流程圖](https://github.com/maxlong-tw/nbiot-demo-client-java/raw/master/workflow.png)
 
-## 編譯需求
+## 編譯與執行需求
 
 1. 安裝 JDK 8 以上版本 https://www.oracle.com/technetwork/java/javase/downloads/index.html#JDK8
 
 2. 安裝 gradle 編譯軟體 https://gradle.org/install/#manually
+
+3. 執行範例程式所在的主機，需能夠與 maxlong.ddns.net 的 TCP/1883 (MQTT) 建立連線，請確保是否有防火牆問題。
 
 ## 編譯與執行
 
