@@ -19,17 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 基於碩久雲平台的 MQTT 協定，展示如何與 NB-IoT 轉換器進行通訊，取得溫濕度計數值。
- * 
- * 1) NB-IoT 轉換器每間隔 1 分鐘會與基地台建立連線。
- * 2) NB-IoT 轉換器向碩久雲平台送出『連線』訊息。
- * 3）碩久雲平台透過 MQTT 協定，將『連線』訊息傳送給控制端，也就是此範例程式。
- * 4）控制端收到『連線』訊息後，透過 MQTT 協定對 NB-IoT 轉換器送出 Modbus 指令。
- * 5）NB-IoT 轉換器將 Modbus 指令，送至其銜接的溫濕度計，並得到 Modbus 回應數值。
- * 6）NB-IoT 轉換器再將溫濕度計的 Modbus 回應數值，上傳至碩久雲平台。
- * 7）碩久雲平台透過 MQTT 協定，將 Mdobus 回應數值回傳給控制端，藉此呈現溫濕度數值。
- * 8）當 NB-IoT 轉換器在 20 秒內，沒有收到來自控制端的指令，會向碩久雲平台送出『離線』訊息。
- * 9) NB-IoT 轉換器與基地台斷線，休眠 1 分鐘後再重複上述流程。
+ * 基於 MQTT 協定, 展示如何控制端與 NB-IoT 轉換器進行通訊，取得溫濕度計數值。
  * 
  * @author Jack
  *
@@ -41,20 +31,20 @@ public class Main {
 	
 	String imei = "866425030013488"; // NB-IoT 轉換器 LTE 模組的 IMEI 編號，共 15 碼數字
 	
-	// 碩久的雲平台，支援 MQTT 物聯網協定
+	// 碩久的雲平台, 支持 MQTT 物聯網協定
 	String broker = "tcp://maxlong.ddns.net:1883";
 	String username = "demo";
-	String password = "maxlong";
+	String password = "maxlong"; // 展示與測試用帳號密碼
 
 	MqttClient mqtt;	
 	
-	// MQTT Topic - 接收 NB-IoT 轉換器的上線狀態
+	// 接收 NB-IoT 轉換器的上線狀態 (heart beat 或 disconnect 封包)
 	String topicStatus = String.format("/maxlong/broker/imei/%s/status", imei);
 	
-	// MQTT Topic - 將資料傳送到 NB-IoT 轉換器上
+	// 將指令透過雲平台轉送到 NB-IoT 轉換器
 	String topicTx = String.format("/maxlong/broker/imei/%s/tx", imei);
 	
-	// MQTT Topic - 接收來自 NB-IoT 轉換器的資料
+	// 透過雲平台接收來自 NB-IoT 轉換器的指令結果
 	String topicRx = String.format("/maxlong/broker/imei/%s/rx", imei);
 	
 	ExecutorService executor = Executors.newCachedThreadPool();
@@ -69,11 +59,14 @@ public class Main {
 		opt.setCleanSession(true);
 
 		// 建立 MQTT 連線
-		log.info("向碩久雲平台建立 MQTT 連線 - {}", broker);		
-		mqtt = new MqttClient(broker, MqttClient.generateClientId(), new MemoryPersistence());
+		log.info("向雲平台建立 MQTT 連線 - {}", broker);		
+		mqtt = new MqttClient(
+				broker,
+				MqttClient.generateClientId(),
+				new MemoryPersistence());
 		mqtt.connect(opt);
 		
-		// 設定接收來自碩久雲平台的 MQTT 訊息
+		// 設定接收來自雲平台的 MQTT 訊息
 		mqtt.setCallback(new MqttCallback() {
 			
 			@Override
@@ -85,19 +78,21 @@ public class Main {
 			
 			@Override
 			public void deliveryComplete(IMqttDeliveryToken token) {
+				// 暫不處理
 			}
 			
 			@Override
 			public void connectionLost(Throwable cause) {
+				// 暫不處理
 			}
 		});
 
-		// 訂閱接收 NB-IoT 轉換器的『狀態』訊息
-		log.info("開始接收 NB-IoT 轉換器 MQTT 的『狀態』訊息 - {}", topicStatus);
-		mqtt.subscribe(topicStatus); // wait for heartbeat
+		// 訂閱接收 NB-IoT 轉換器的上線狀態訊息
+		log.info("開始接收 NB-IoT 轉換器 MQTT 的上線狀態訊息 - {}", topicStatus);
+		mqtt.subscribe(topicStatus); // wait for heart beat
 		
-		// 訂閱接收 NB-IoT 轉換器的『資料』訊息
-		log.info("開始接收 NB-IoT 轉換器 MQTT 的『回應』訊息 - {}", topicRx);
+		// 訂閱接收 NB-IoT 轉換器的指令結果
+		log.info("開始接收 NB-IoT 轉換器 MQTT 的回應訊息 - {}", topicRx);
 		mqtt.subscribe(topicRx); // wait for incoming data
 	}
 	
@@ -108,8 +103,8 @@ public class Main {
 				String json = new String(payload);
 				Map<?, ?> msg = jackson.readValue(json, Map.class);			
 				String type = (String) msg.get("type");			
-				if ("heartbeat".equals(type)) { // 來自 NB-IoT 連線上來的狀態，內容為 {"type":"heartbeat","timestamp":"2019-06-06T22:33:09.449Z","rssi":-65,"from":"211.77.241.100:40893"}
-					sendModbusReq(); // 收到『連線』訊息，開始送 Modbus 指令詢問溫濕度計狀態
+				if ("heartbeat".equals(type)) { // 來自 NB-IoT 轉換器連線上來的狀態，內容為 {"type":"heartbeat","timestamp":"2019-06-06T22:33:09.449Z","rssi":-65,"from":"211.77.241.100:40893"}
+					sendModbusReq(); // 收到 heart beat 訊息，開始送 Modbus 指令詢問溫濕度計狀態
 					
 				} else if ("disconnect".equals(type)) { // 來自 NB-IoT 的離線狀態，內容為 {"type":"disconnect","timestamp":"2019-06-06T22:35:42.112Z","from":"211.77.241.100:42432"}
 					log.warn("{} 已經離線", imei);
@@ -118,7 +113,7 @@ public class Main {
 					log.error("未知的 MQTT 訊息 - {}", json);				
 				}
 				
-			} else if (topicRx.equals(topic)) { // 來自 NB-IoT 的『資料』訊息
+			} else if (topicRx.equals(topic)) { // 來自 NB-IoT 的回應訊息
 				recvModbusReply(payload);
 			}
 			
@@ -127,14 +122,14 @@ public class Main {
 		}
 	}
 	
-	// 向站點 2 的溫濕度計透過 Modbus/RTU 協定取得當前數值
+	// 向 NB-IoT 轉換器銜接 device ID = 1 的溫濕度計送出 Modbus 指令
 	void sendModbusReq() {
 		byte[] req = new byte[] {
-				0x02,				// slave id = 2
-				0x03,				// read holding register
+				0x01,				// device id = 1
+				0x03,				// holding register
 				0x00, 0x00,			// address = 0
-				0x00, 0x02,			// quantity = 2
-				(byte) 0xc4, 0x38	// CRC16
+				0x00, 0x02,			// count = 2
+				(byte) 0xc4, 0x0B	// CRC
 		};
 		
 		log.info("送出 Modbus 指令 - {}", toString(req));
@@ -147,19 +142,19 @@ public class Main {
 		}
 	}
 	
-	// 接收來自站點 2 的溫濕度計的 Modbus/RTU 回應結果
+	// 接收來自 NB-IoT 轉換器溫濕度計的結果
 	void recvModbusReply(byte[] reply) throws IOException {
 		log.info("得到 Modbus 回應 - {}", toString(reply));
 		
 		ByteArrayInputStream bais = new ByteArrayInputStream(reply);
 		DataInputStream dis = new DataInputStream(bais);
 		int slaveId = dis.read();
-		if (slaveId != 0x02) {
+		if (slaveId != 0x01) { // device id = 1
 			return;
 		}
 		
 		int function = dis.read();
-		if (function != 0x03) {
+		if (function != 0x03) { // read holding registers
 			return;
 		}
 		
