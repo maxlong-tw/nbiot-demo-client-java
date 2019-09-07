@@ -9,8 +9,8 @@
 4. 控制端收到 heart beat 封包後, 再利用 MQTT 協定對 NB-IoT 轉換器送出 Modbus 指令. 
 5. NB-IoT 轉換器將 Modbus 指令, 轉送至它連接的溫濕度計 (via RS-232, RS-485 or LoRa), 並得到 Modbus 回應結果. 
 6. NB-IoT 轉換器再將溫濕度計的 Modbus 回應結果, 上傳至雲平台. 
-7. 雲平台透過 MQTT 協定, 將 Mdobus 回應結果回傳給控制端, 最後呈現溫濕度數值. 
-8. 若 NB-IoT 轉換器在 20 秒內, 沒有收到來自控制端的 Modbus 指令, 會向碩久雲平台送出 disconnect 封包. 
+7. 雲平台透過 MQTT 協定, 將 Modbus 回應結果回傳給控制端, 最後呈現溫濕度數值. 
+8. 若 NB-IoT 轉換器在 20 秒內, 沒有收到來自控制端的 Modbus 指令, 會向雲平台送出 disconnect 封包. 
 9. NB-IoT 轉換器與基地台斷線, 休眠 1 分鐘後再重複以上的流程. 
 
 ![流程圖](https://github.com/maxlong-tw/nbiot-demo-client-java/raw/master/workflow.png)
